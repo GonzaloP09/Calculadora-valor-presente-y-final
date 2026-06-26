@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Valor Presente / Futuro</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --border: #262d3f;
+    --accent: #4f7fff;
+    --accent-dim: #1e2d55;
+    --green: #30d988;
+    --green-dim: #0d3322;
+    --yellow: #f5c842;
+    --yellow-dim: #2e2710;
+    --text: #e8ecf5;
+    --muted: #6b7694;
+    --mono: 'Courier New', 'Consolas', 'Menlo', monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 16px 60px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 300;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    width: 100%;
+    max-width: 560px;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .field {
+    margin-bottom: 20px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  .input-wrap {
+    position: relative;
+  }
+
+  .prefix {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  .suffix {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  input[type="number"], select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 16px;
+    padding: 12px 14px;
+    outline: none;
+    transition: border-color 0.15s;
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  .has-prefix input { padding-left: 28px; }
+  .has-suffix input { padding-right: 42px; }
+
+  input:focus, select:focus { border-color: var(--accent); }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  .range-val {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    min-width: 52px;
+    text-align: right;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+  }
+
+  /* Toggle mode */
+  .mode-toggle {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .mode-btn {
+    flex: 1;
+    padding: 10px;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .mode-btn.active {
+    background: var(--accent-dim);
+    color: var(--accent);
+  }
+
+  /* Results */
+  .results {
+    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .result-row.highlight-green {
+    border-color: var(--green);
+    background: var(--green-dim);
+  }
+
+  .result-row.highlight-yellow {
+    border-color: var(--yellow);
+    background: var(--yellow-dim);
+  }
+
+  .result-label {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .result-value {
+    font-family: var(--mono);
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  .result-row.highlight-green .result-value { color: var(--green); }
+  .result-row.highlight-yellow .result-value { color: var(--yellow); }
+
+  .small-val {
+    font-size: 13px;
+  }
+
+  .tag {
+    font-size: 10px;
+    font-family: var(--mono);
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  .formula-box {
+    margin-top: 12px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .formula-box span { color: var(--text); }
+
+  select {
+    padding: 12px 14px;
+    cursor: pointer;
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Finanzas · Tasas</div>
+  <h1>Valor <span>Presente</span> / Futuro</h1>
+  <p class="subtitle">Capitalización compuesta con tasa nominal anual</p>
+</header>
+
+<div class="card">
+
+  <div class="section-label">Modo de cálculo</div>
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="btn-vp" onclick="setMode('vp')">
+      💰 Valor Presente → Valor Futuro
+    </button>
+    <button class="mode-btn" id="btn-vf" onclick="setMode('vf')">
+      🔄 Valor Futuro → Valor Presente
+    </button>
+  </div>
+
+  <div class="field" id="field-monto">
+    <label id="label-monto">Monto conocido ($)</label>
+    <div class="input-wrap has-prefix">
+      <span class="prefix">$</span>
+      <input type="number" id="monto" value="650000" min="0" step="1000" oninput="calcular()">
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Tasa Nominal Anual (%)</label>
+    <div class="input-wrap has-suffix">
+      <input type="number" id="tna" value="22" min="0" max="999" step="0.5" oninput="syncSlider(); calcular()">
+      <span class="suffix">%</span>
+    </div>
+    <div class="slider-row">
+      <input type="range" id="tna-slider" min="0" max="200" step="0.5" value="22" oninput="syncInput(); calcular()">
+      <span class="range-val" id="range-display">22.0%</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Plazo</label>
+    <div style="display:flex; gap:10px;">
+      <div class="input-wrap" style="flex:1;">
+        <input type="number" id="plazo" value="12" min="1" max="600" step="1" oninput="calcular()">
+      </div>
+      <select id="unidad" onchange="calcular()" style="flex:1;">
+        <option value="meses" selected>Meses</option>
+        <option value="anios">Años</option>
+        <option value="dias">Días</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Capitalización</label>
+    <select id="cap" onchange="calcular()">
+      <option value="12" selected>Mensual (12 veces/año)</option>
+      <option value="4">Trimestral (4 veces/año)</option>
+      <option value="2">Semestral (2 veces/año)</option>
+      <option value="1">Anual (1 vez/año)</option>
+      <option value="365">Diaria (365 veces/año)</option>
+    </select>
+  </div>
+
+  <hr class="divider">
+
+  <div class="section-label">Resultados</div>
+  <div class="results" id="resultados"></div>
+  <div class="formula-box" id="formula-box"></div>
+</div>
+
+<script>
+let mode = 'vp'; // 'vp' = conocemos el presente, calculamos el futuro
+               // 'vf' = conocemos el futuro, calculamos el presente
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-vp').classList.toggle('active', m === 'vp');
+  document.getElementById('btn-vf').classList.toggle('active', m === 'vf');
+  document.getElementById('label-monto').textContent =
+    m === 'vp' ? 'Precio de contado / Valor presente ($)' : 'Precio a plazo / Valor futuro ($)';
+  calcular();
+}
+
+function syncSlider() {
+  const v = parseFloat(document.getElementById('tna').value) || 0;
+  document.getElementById('tna-slider').value = Math.min(v, 200);
+  document.getElementById('range-display').textContent = v.toFixed(1) + '%';
+}
+
+function syncInput() {
+  const v = parseFloat(document.getElementById('tna-slider').value);
+  document.getElementById('tna').value = v;
+  document.getElementById('range-display').textContent = v.toFixed(1) + '%';
+}
+
+function fmt(n) {
+  return n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtPct(n) {
+  return n.toFixed(2).replace('.', ',') + '%';
+}
+
+function calcular() {
+  const monto = parseFloat(document.getElementById('monto').value) || 0;
+  const tna = parseFloat(document.getElementById('tna').value) || 0;
+  const plazoVal = parseFloat(document.getElementById('plazo').value) || 0;
+  const unidad = document.getElementById('unidad').value;
+  const cap = parseFloat(document.getElementById('cap').value);
+
+  // Convertir plazo a meses para cálculo
+  let plazoMeses;
+  if (unidad === 'meses') plazoMeses = plazoVal;
+  else if (unidad === 'anios') plazoMeses = plazoVal * 12;
+  else plazoMeses = plazoVal / 30.4375;
+
+  const n = cap; // capitalizaciones por año
+  const i = (tna / 100) / n; // tasa por período
+  const periodos = plazoMeses / 12 * n; // cantidad de períodos
+
+  const factor = Math.pow(1 + i, periodos);
+
+  let vp, vf;
+  if (mode === 'vp') {
+    vp = monto;
+    vf = monto * factor;
+  } else {
+    vf = monto;
+    vp = monto / factor;
+  }
+
+  const diferencia = vf - vp;
+  const recargo = vp > 0 ? (diferencia / vp) * 100 : 0;
+  const tasaMensual = (Math.pow(1 + i, n / 12) - 1) * 100;
+  const tea = (Math.pow(1 + i, n) - 1) * 100;
+
+  // Plazo legible
+  let plazoStr = '';
+  if (unidad === 'meses') plazoStr = `${plazoVal} mes${plazoVal !== 1 ? 'es' : ''}`;
+  else if (unidad === 'anios') plazoStr = `${plazoVal} año${plazoVal !== 1 ? 's' : ''}`;
+  else plazoStr = `${plazoVal} días`;
+
+  const res = document.getElementById('resultados');
+  res.innerHTML = `
+    <div class="result-row">
+      <div>
+        <div class="result-label">${mode === 'vp' ? 'Precio de contado' : 'Valor Presente'}</div>
+        <div style="font-size:11px; color:var(--muted); margin-top:2px;">Hoy</div>
+      </div>
+      <div class="result-value small-val">$ ${fmt(vp)}</div>
+    </div>
+    <div class="result-row highlight-green">
+      <div>
+        <div class="result-label">${mode === 'vp' ? 'Precio a plazo / Valor Futuro' : 'Precio de contado cobrado en ' + plazoStr}</div>
+        <div style="font-size:11px; color:var(--muted); margin-top:2px;">En ${plazoStr}</div>
+      </div>
+      <div class="result-value">$ ${fmt(vf)}</div>
+    </div>
+    <div class="result-row highlight-yellow">
+      <div>
+        <div class="result-label">Costo financiero total</div>
+        <div style="font-size:11px; color:var(--muted); margin-top:2px;">Intereses devengados</div>
+      </div>
+      <div class="result-value">$ ${fmt(diferencia)} <span style="font-size:12px;">(+${fmtPct(recargo)})</span></div>
+    </div>
+    <div class="result-row" style="flex-wrap:wrap; gap:10px;">
+      <div style="flex:1; min-width:120px;">
+        <div class="result-label">Tasa mensual</div>
+        <div class="result-value small-val" style="color:var(--accent)">${fmtPct(tasaMensual)}</div>
+      </div>
+      <div style="flex:1; min-width:120px;">
+        <div class="result-label">TEA (efectiva anual)</div>
+        <div class="result-value small-val" style="color:var(--accent)">${fmtPct(tea)}</div>
+      </div>
+      <div style="flex:1; min-width:120px;">
+        <div class="result-label">Factor acumulado</div>
+        <div class="result-value small-val" style="color:var(--accent)">${factor.toFixed(6)}</div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('formula-box').innerHTML = `
+    <div style="margin-bottom:4px; color:var(--muted);">Fórmula aplicada:</div>
+    VF = VP × (1 + TNA/n)<sup>n×t</sup><br>
+    VF = <span>$ ${fmt(vp)}</span> × (1 + <span>${(tna/100).toFixed(4)}</span>/<span>${cap}</span>)<sup><span>${cap}</span>×<span>${(plazoMeses/12).toFixed(4)}</span></sup><br>
+    VF = <span>$ ${fmt(vp)}</span> × <span>${factor.toFixed(6)}</span> = <span style="color:var(--green)">$ ${fmt(vf)}</span>
+  `;
+}
+
+// Init
+calcular();
+</script>
+</body>
+</html>
