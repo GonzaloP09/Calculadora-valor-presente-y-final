@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora VP / VF</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e8ecf5;font-family:Arial,Helvetica,sans-serif;padding:30px 16px;min-height:100vh}
+h1{text-align:center;font-size:22px;margin-bottom:4px;color:#4f7fff}
+.sub{text-align:center;font-size:12px;color:#6b7694;margin-bottom:28px}
+.card{background:#181c27;border:1px solid #262d3f;border-radius:10px;padding:24px;max-width:520px;margin:0 auto}
+.mode{display:flex;border:1px solid #262d3f;border-radius:8px;overflow:hidden;margin-bottom:20px}
+.mode button{flex:1;padding:10px 6px;background:transparent;border:none;color:#6b7694;font-size:12px;cursor:pointer;font-family:Arial}
+.mode button.on{background:#1e2d55;color:#4f7fff}
+label{display:block;font-size:12px;color:#6b7694;margin-bottom:5px;margin-top:14px}
+input,select{width:100%;background:#0f1117;border:1px solid #262d3f;border-radius:7px;color:#e8ecf5;font-size:15px;padding:10px 12px;outline:none;font-family:Arial}
+input:focus,select:focus{border-color:#4f7fff}
+input[type=number]{-moz-appearance:textfield}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+.row2{display:flex;gap:10px}
+.row2>div{flex:1}
+hr{border:none;border-top:1px solid #262d3f;margin:20px 0}
+.res{margin-top:10px;display:flex;flex-direction:column;gap:10px}
+.rbox{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-radius:8px;border:1px solid #262d3f;background:#0f1117}
+.rbox.g{border-color:#30d988;background:#0d3322}
+.rbox.y{border-color:#f5c842;background:#2e2710}
+.rlabel{font-size:12px;color:#6b7694}
+.rval{font-size:16px;font-weight:700;font-family:'Courier New',monospace}
+.rbox.g .rval{color:#30d988}
+.rbox.y .rval{color:#f5c842}
+.rval.blue{color:#4f7fff}
+.fml{margin-top:10px;padding:12px;border-radius:8px;background:#0f1117;border:1px dashed #262d3f;font-size:12px;color:#6b7694;font-family:'Courier New',monospace;line-height:1.8}
+.fml span{color:#e8ecf5}
+.mini{display:flex;gap:8px;flex-wrap:wrap}
+.mini .rbox{flex:1;min-width:130px;flex-direction:column;align-items:flex-start;gap:4px}
+.slider-row{display:flex;align-items:center;gap:10px;margin-top:6px}
+input[type=range]{flex:1;height:4px;border-radius:2px;accent-color:#4f7fff;background:#262d3f;cursor:pointer;padding:0;border:none}
+.rv{font-size:12px;color:#4f7fff;font-family:'Courier New',monospace;min-width:48px;text-align:right}
+</style>
+</head>
+<body>
+
+<h1>Calculadora VP / VF</h1>
+<p class="sub">Capitalización compuesta · Tasa Nominal Anual</p>
+
+<div class="card">
+
+  <div class="mode">
+    <button class="on" id="bvp" onclick="setMode('vp')">VP → Valor Futuro</button>
+    <button id="bvf" onclick="setMode('vf')">VF → Valor Presente</button>
+  </div>
+
+  <label id="lmonto">Precio de contado / Valor Presente ($)</label>
+  <input type="number" id="monto" value="650000" min="0" step="1000" oninput="calc()">
+
+  <label>Tasa Nominal Anual (%)</label>
+  <input type="number" id="tna" value="22" min="0" max="999" step="0.5" oninput="syncS();calc()">
+  <div class="slider-row">
+    <input type="range" id="sl" min="0" max="200" step="0.5" value="22" oninput="syncI();calc()">
+    <span class="rv" id="rv">22.0%</span>
+  </div>
+
+  <div class="row2">
+    <div>
+      <label>Plazo</label>
+      <input type="number" id="plazo" value="12" min="1" step="1" oninput="calc()">
+    </div>
+    <div>
+      <label>Unidad</label>
+      <select id="unidad" onchange="calc()">
+        <option value="meses" selected>Meses</option>
+        <option value="anios">Años</option>
+        <option value="dias">Días</option>
+      </select>
+    </div>
+  </div>
+
+  <label>Capitalización</label>
+  <select id="cap" onchange="calc()">
+    <option value="12" selected>Mensual (12×/año)</option>
+    <option value="4">Trimestral (4×/año)</option>
+    <option value="2">Semestral (2×/año)</option>
+    <option value="1">Anual (1×/año)</option>
+    <option value="365">Diaria (365×/año)</option>
+  </select>
+
+  <hr>
+
+  <div class="res" id="res"></div>
+  <div class="fml" id="fml"></div>
+
+</div>
+
+<script>
+var mode = 'vp';
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('bvp').className = m==='vp'?'on':'';
+  document.getElementById('bvf').className = m==='vf'?'on':'';
+  document.getElementById('lmonto').textContent = m==='vp'
+    ? 'Precio de contado / Valor Presente ($)'
+    : 'Precio a plazo / Valor Futuro ($)';
+  calc();
+}
+
+function syncS() {
+  var v = parseFloat(document.getElementById('tna').value)||0;
+  document.getElementById('sl').value = Math.min(v,200);
+  document.getElementById('rv').textContent = v.toFixed(1)+'%';
+}
+
+function syncI() {
+  var v = parseFloat(document.getElementById('sl').value);
+  document.getElementById('tna').value = v;
+  document.getElementById('rv').textContent = v.toFixed(1)+'%';
+}
+
+function f(n) {
+  return n.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function calc() {
+  var monto = parseFloat(document.getElementById('monto').value)||0;
+  var tna   = parseFloat(document.getElementById('tna').value)||0;
+  var plazoV= parseFloat(document.getElementById('plazo').value)||0;
+  var unid  = document.getElementById('unidad').value;
+  var cap   = parseFloat(document.getElementById('cap').value);
+
+  var pm = unid==='anios' ? plazoV*12 : unid==='dias' ? plazoV/30.4375 : plazoV;
+  var i  = (tna/100)/cap;
+  var p  = pm/12*cap;
+  var fac= Math.pow(1+i, p);
+
+  var vp, vf;
+  if (mode==='vp') { vp=monto; vf=monto*fac; }
+  else             { vf=monto; vp=monto/fac; }
+
+  var dif    = vf-vp;
+  var pct    = vp>0?(dif/vp)*100:0;
+  var tmens  = (Math.pow(1+i, cap/12)-1)*100;
+  var tea    = (Math.pow(1+i, cap)-1)*100;
+
+  var plazoStr = plazoV + (unid==='meses'?' mes'+(plazoV!==1?'es':'') : unid==='anios'?' año'+(plazoV!==1?'s':'') : ' días');
+
+  document.getElementById('res').innerHTML =
+    '<div class="rbox"><div><div class="rlabel">Valor Presente (hoy)</div></div><div class="rval blue">$ '+f(vp)+'</div></div>'+
+    '<div class="rbox g"><div><div class="rlabel">Valor Futuro (en '+plazoStr+')</div></div><div class="rval">$ '+f(vf)+'</div></div>'+
+    '<div class="rbox y"><div><div class="rlabel">Costo financiero total</div></div><div class="rval">$ '+f(dif)+' <span style="font-size:12px">(+'+pct.toFixed(2).replace('.',',')+' %)</span></div></div>'+
+    '<div class="mini">'+
+      '<div class="rbox"><div class="rlabel">Tasa mensual</div><div class="rval blue">'+tmens.toFixed(4).replace('.',',')+'%</div></div>'+
+      '<div class="rbox"><div class="rlabel">TEA</div><div class="rval blue">'+tea.toFixed(2).replace('.',',')+'%</div></div>'+
+      '<div class="rbox"><div class="rlabel">Factor</div><div class="rval blue">'+fac.toFixed(6)+'</div></div>'+
+    '</div>';
+
+  document.getElementById('fml').innerHTML =
+    'Fórmula: VF = VP × (1 + TNA/n)<sup>n×t</sup><br>'+
+    'VF = <span>$'+f(vp)+'</span> × (1 + <span>'+(tna/100).toFixed(4)+'</span>/<span>'+cap+'</span>)<sup><span>'+cap+'</span>×<span>'+(pm/12).toFixed(4)+'</span></sup><br>'+
+    'VF = <span>$'+f(vp)+'</span> × <span>'+fac.toFixed(6)+'</span> = <span style="color:#30d988">$'+f(vf)+'</span>';
+}
+
+calc();
+</script>
+</body>
+</html>
